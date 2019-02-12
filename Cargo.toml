@@ -1,0 +1,8 @@
+[package]
+name = "calc-parser"
+version = "0.1.0"
+authors = ["ckanner <kanner.chen@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+syntax = { path = "syntax" }
