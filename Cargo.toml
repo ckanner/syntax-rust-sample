@@ -1,5 +1,5 @@
 [package]
-name = "calc-parser"
+name = "syntax-rust-sample"
 version = "0.1.0"
 authors = ["ckanner <kanner.chen@gmail.com>"]
 edition = "2018"

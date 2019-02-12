@@ -23,11 +23,12 @@ enum SV {
 /**
  * Lex rules.
  */
-static LEX_RULES: [&'static str; 8] = [
+static LEX_RULES: [&'static str; 9] = [
     r##########"^\s+"##########,
     r##########"^\d+"##########,
     r##########"^"[^"]*""##########,
     r##########"^V"##########,
+    r##########"^hasLabel"##########,
     r##########"^g"##########,
     r##########"^\."##########,
     r##########"^\("##########,
@@ -75,10 +76,11 @@ macro_rules! pop {
  *
  * 0 - encoded non-terminal, 1 - length of RHS to pop from the stack
  */
-static PRODUCTIONS : [[i32; 2]; 5] = [
+static PRODUCTIONS : [[i32; 2]; 6] = [
     [-1, 1],
     [0, 5],
     [1, 3],
+    [1, 1],
     [1, 1],
     [2, 4]
 ];
@@ -103,13 +105,13 @@ lazy_static! {
     /**
      * Lexical rules grouped by lexer state (by start condition).
      */
-    static ref LEX_RULES_BY_START_CONDITIONS: HashMap<&'static str, Vec<i32>> = hashmap! { "INITIAL" => vec! [ 0, 1, 2, 3, 4, 5, 6, 7 ] };
+    static ref LEX_RULES_BY_START_CONDITIONS: HashMap<&'static str, Vec<i32>> = hashmap! { "INITIAL" => vec! [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ] };
 
     /**
      * Maps a string name of a token type to its encoded number (the first
      * token number starts after all numbers for non-terminal).
      */
-    static ref TOKENS_MAP: HashMap<&'static str, i32> = hashmap! { "V" => 3, "STRING" => 4, "'g'" => 5, "'.'" => 6, "'('" => 7, "')'" => 8, "$" => 9 };
+    static ref TOKENS_MAP: HashMap<&'static str, i32> = hashmap! { "HasLabelStep" => 3, "V" => 4, "STRING" => 5, "'g'" => 6, "'.'" => 7, "'('" => 8, "')'" => 9, "$" => 10 };
 
     /**
      * Parsing table.
@@ -118,20 +120,21 @@ lazy_static! {
      * from an encoded symbol to table entry (TE).
      */
     static ref TABLE: Vec<HashMap<i32, TE>>= vec![
-    hashmap! { 0 => TE::Transit(1), 5 => TE::Shift(2) },
-    hashmap! { 9 => TE::Accept },
-    hashmap! { 6 => TE::Shift(3) },
-    hashmap! { 2 => TE::Transit(4), 3 => TE::Shift(5) },
-    hashmap! { 6 => TE::Shift(6) },
-    hashmap! { 7 => TE::Shift(11) },
-    hashmap! { 1 => TE::Transit(7), 2 => TE::Transit(8), 3 => TE::Shift(5) },
-    hashmap! { 6 => TE::Shift(9), 9 => TE::Reduce(1) },
-    hashmap! { 6 => TE::Reduce(3), 9 => TE::Reduce(3) },
-    hashmap! { 1 => TE::Transit(10), 2 => TE::Transit(8), 3 => TE::Shift(5) },
-    hashmap! { 6 => TE::Reduce(2), 9 => TE::Reduce(2) },
-    hashmap! { 4 => TE::Shift(12) },
-    hashmap! { 8 => TE::Shift(13) },
-    hashmap! { 6 => TE::Reduce(4), 9 => TE::Reduce(4) }
+    hashmap! { 0 => TE::Transit(1), 6 => TE::Shift(2) },
+    hashmap! { 10 => TE::Accept },
+    hashmap! { 7 => TE::Shift(3) },
+    hashmap! { 2 => TE::Transit(4), 4 => TE::Shift(5) },
+    hashmap! { 7 => TE::Shift(6) },
+    hashmap! { 8 => TE::Shift(12) },
+    hashmap! { 1 => TE::Transit(7), 2 => TE::Transit(8), 3 => TE::Shift(9), 4 => TE::Shift(5) },
+    hashmap! { 7 => TE::Shift(10), 10 => TE::Reduce(1) },
+    hashmap! { 7 => TE::Reduce(3), 10 => TE::Reduce(3) },
+    hashmap! { 7 => TE::Reduce(4), 10 => TE::Reduce(4) },
+    hashmap! { 1 => TE::Transit(11), 2 => TE::Transit(8), 3 => TE::Shift(9), 4 => TE::Shift(5) },
+    hashmap! { 7 => TE::Reduce(2), 10 => TE::Reduce(2) },
+    hashmap! { 5 => TE::Shift(13) },
+    hashmap! { 9 => TE::Shift(14) },
+    hashmap! { 7 => TE::Reduce(5), 10 => TE::Reduce(5) }
 ];
 }
 
@@ -266,7 +269,7 @@ struct Tokenizer {
     yytext: &'static str,
     yyleng: usize,
 
-    handlers: [fn(&mut Tokenizer) -> &'static str; 8],
+    handlers: [fn(&mut Tokenizer) -> &'static str; 9],
 }
 
 impl Tokenizer {
@@ -306,7 +309,8 @@ impl Tokenizer {
     Tokenizer::_lex_rule4,
     Tokenizer::_lex_rule5,
     Tokenizer::_lex_rule6,
-    Tokenizer::_lex_rule7
+    Tokenizer::_lex_rule7,
+    Tokenizer::_lex_rule8
 ],
         };
 
@@ -539,18 +543,22 @@ return "V";
 }
 
 fn _lex_rule4(&mut self) -> &'static str {
-return "'g'";
+return "HASLABEL";
 }
 
 fn _lex_rule5(&mut self) -> &'static str {
-return "'.'";
+return "'g'";
 }
 
 fn _lex_rule6(&mut self) -> &'static str {
-return "'('";
+return "'.'";
 }
 
 fn _lex_rule7(&mut self) -> &'static str {
+return "'('";
+}
+
+fn _lex_rule8(&mut self) -> &'static str {
 return "')'";
 }
 }
@@ -581,7 +589,7 @@ pub struct Parser {
     /**
      * Semantic action handlers.
      */
-    handlers: [fn(&mut Parser) -> SV; 5],
+    handlers: [fn(&mut Parser) -> SV; 6],
 }
 
 impl Parser {
@@ -601,7 +609,8 @@ impl Parser {
     Parser::_handler1,
     Parser::_handler2,
     Parser::_handler3,
-    Parser::_handler4
+    Parser::_handler4,
+    Parser::_handler5
 ],
         }
     }
@@ -761,6 +770,14 @@ __
 
 fn _handler4(&mut self) -> SV {
 // Semantic values prologue.
+let mut _1 = self.values_stack.pop().unwrap();
+
+let __ = _1;
+__
+}
+
+fn _handler5(&mut self) -> SV {
+// Semantic values prologue.
 self.values_stack.pop();
 let mut _3 = pop!(self.values_stack, _2);
 self.values_stack.pop();
@@ -768,6 +785,14 @@ self.values_stack.pop();
 
 let __ = Step::V {
             id: _3,
+        };
+    };
+
+HasLabelStep
+    : HASLABEL '(' STRING ')' {
+
+        let __ = Step::HasLabel {
+            label: _3,
         };
 SV::_1(__)
 }

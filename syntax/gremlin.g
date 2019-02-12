@@ -9,6 +9,7 @@
 \"[^"]*\"    {  let n = yytext.len(); yytext = &yytext[1..(n -1)]; return "STRING"; }
 
 "V"           return "V";
+"hasLabel"    return "HASLABEL";
 
 /lex
 
@@ -79,6 +80,10 @@ Step
 
     | VStep {
         $$ = $1;
+    }
+
+    | HasLabelStep {
+        $$ = $1;
     };
 
 VStep
@@ -90,5 +95,12 @@ VStep
         };
     };
 
+HasLabelStep
+    : HASLABEL '(' STRING ')' {
+        |$3: &'static str| -> Step;
 
+        $$ = Step::HasLabel {
+            label: $3,
+        };
+    };
 
