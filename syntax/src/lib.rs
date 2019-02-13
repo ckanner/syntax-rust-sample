@@ -17,7 +17,7 @@ enum SV {
     Undefined,
     _0(Token),
     _1(Step),
-    _2(&'static str)
+    _2(String)
 }
 
 /**
@@ -76,13 +76,14 @@ macro_rules! pop {
  *
  * 0 - encoded non-terminal, 1 - length of RHS to pop from the stack
  */
-static PRODUCTIONS : [[i32; 2]; 6] = [
+static PRODUCTIONS : [[i32; 2]; 7] = [
     [-1, 1],
     [0, 5],
     [1, 3],
     [1, 1],
     [1, 1],
-    [2, 4]
+    [2, 4],
+    [3, 4]
 ];
 
 /**
@@ -111,7 +112,7 @@ lazy_static! {
      * Maps a string name of a token type to its encoded number (the first
      * token number starts after all numbers for non-terminal).
      */
-    static ref TOKENS_MAP: HashMap<&'static str, i32> = hashmap! { "HasLabelStep" => 3, "V" => 4, "STRING" => 5, "'g'" => 6, "'.'" => 7, "'('" => 8, "')'" => 9, "$" => 10 };
+    static ref TOKENS_MAP: HashMap<&'static str, i32> = hashmap! { "V" => 4, "STRING" => 5, "HASLABEL" => 6, "'g'" => 7, "'.'" => 8, "'('" => 9, "')'" => 10, "$" => 11 };
 
     /**
      * Parsing table.
@@ -120,21 +121,25 @@ lazy_static! {
      * from an encoded symbol to table entry (TE).
      */
     static ref TABLE: Vec<HashMap<i32, TE>>= vec![
-    hashmap! { 0 => TE::Transit(1), 6 => TE::Shift(2) },
-    hashmap! { 10 => TE::Accept },
-    hashmap! { 7 => TE::Shift(3) },
+    hashmap! { 0 => TE::Transit(1), 7 => TE::Shift(2) },
+    hashmap! { 11 => TE::Accept },
+    hashmap! { 8 => TE::Shift(3) },
     hashmap! { 2 => TE::Transit(4), 4 => TE::Shift(5) },
-    hashmap! { 7 => TE::Shift(6) },
-    hashmap! { 8 => TE::Shift(12) },
-    hashmap! { 1 => TE::Transit(7), 2 => TE::Transit(8), 3 => TE::Shift(9), 4 => TE::Shift(5) },
-    hashmap! { 7 => TE::Shift(10), 10 => TE::Reduce(1) },
-    hashmap! { 7 => TE::Reduce(3), 10 => TE::Reduce(3) },
-    hashmap! { 7 => TE::Reduce(4), 10 => TE::Reduce(4) },
-    hashmap! { 1 => TE::Transit(11), 2 => TE::Transit(8), 3 => TE::Shift(9), 4 => TE::Shift(5) },
-    hashmap! { 7 => TE::Reduce(2), 10 => TE::Reduce(2) },
-    hashmap! { 5 => TE::Shift(13) },
-    hashmap! { 9 => TE::Shift(14) },
-    hashmap! { 7 => TE::Reduce(5), 10 => TE::Reduce(5) }
+    hashmap! { 8 => TE::Shift(6) },
+    hashmap! { 9 => TE::Shift(13) },
+    hashmap! { 1 => TE::Transit(7), 2 => TE::Transit(8), 3 => TE::Transit(9), 4 => TE::Shift(5), 6 => TE::Shift(10) },
+    hashmap! { 8 => TE::Shift(11), 11 => TE::Reduce(1) },
+    hashmap! { 8 => TE::Reduce(3), 11 => TE::Reduce(3) },
+    hashmap! { 8 => TE::Reduce(4), 11 => TE::Reduce(4) },
+    hashmap! { 9 => TE::Shift(16) },
+    hashmap! { 1 => TE::Transit(12), 2 => TE::Transit(8), 3 => TE::Transit(9), 4 => TE::Shift(5), 6 => TE::Shift(10) },
+    hashmap! { 8 => TE::Reduce(2), 11 => TE::Reduce(2) },
+    hashmap! { 5 => TE::Shift(14) },
+    hashmap! { 10 => TE::Shift(15) },
+    hashmap! { 8 => TE::Reduce(5), 11 => TE::Reduce(5) },
+    hashmap! { 5 => TE::Shift(17) },
+    hashmap! { 10 => TE::Shift(18) },
+    hashmap! { 8 => TE::Reduce(6), 11 => TE::Reduce(6) }
 ];
 }
 
@@ -163,11 +168,11 @@ lazy_static! {
 pub enum Step {
 
     V {
-        id: &'static str,
+        id: String,
     },
 
     HasLabel {
-        label: &'static str,
+        label: String,
     },
 
     Strategy {
@@ -589,7 +594,7 @@ pub struct Parser {
     /**
      * Semantic action handlers.
      */
-    handlers: [fn(&mut Parser) -> SV; 6],
+    handlers: [fn(&mut Parser) -> SV; 7],
 }
 
 impl Parser {
@@ -610,7 +615,8 @@ impl Parser {
     Parser::_handler2,
     Parser::_handler3,
     Parser::_handler4,
-    Parser::_handler5
+    Parser::_handler5,
+    Parser::_handler6
 ],
         }
     }
@@ -786,12 +792,17 @@ self.values_stack.pop();
 let __ = Step::V {
             id: _3,
         };
-    };
+SV::_1(__)
+}
 
-HasLabelStep
-    : HASLABEL '(' STRING ')' {
+fn _handler6(&mut self) -> SV {
+// Semantic values prologue.
+self.values_stack.pop();
+let mut _3 = pop!(self.values_stack, _2);
+self.values_stack.pop();
+self.values_stack.pop();
 
-        let __ = Step::HasLabel {
+let __ = Step::HasLabel {
             label: _3,
         };
 SV::_1(__)

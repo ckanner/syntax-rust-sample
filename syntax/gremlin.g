@@ -24,11 +24,11 @@
 pub enum Step {
 
     V {
-        id: &'static str,
+        id: String,
     },
 
     HasLabel {
-        label: &'static str,
+        label: String,
     },
 
     Strategy {
@@ -88,7 +88,7 @@ Step
 
 VStep
     : V '(' STRING ')' {
-        |$3: &'static str| -> Step;
+        |$3: String| -> Step;
 
         $$ = Step::V {
             id: $3,
@@ -97,7 +97,7 @@ VStep
 
 HasLabelStep
     : HASLABEL '(' STRING ')' {
-        |$3: &'static str| -> Step;
+        |$3: String| -> Step;
 
         $$ = Step::HasLabel {
             label: $3,
